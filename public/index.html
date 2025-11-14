@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Sistema de visualización geográfica con ArcGIS y GeoServer">
+  <meta name="theme-color" content="#0079c1">
+  <title>Sistema de Gestión de Assets - Mapa</title>
+  
+  <!-- ArcGIS CSS -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.28/@arcgis/core/assets/esri/themes/light/main.css">
+  
+  <!-- Preconnect to GeoServer for better performance -->
+  <link rel="preconnect" href="https://geoserver.hanoit.com">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Avenir Next', 'Helvetica Neue', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    #root {
+      height: 100vh;
+      width: 100vw;
+    }
+    
+    /* Prevent text selection during map interaction */
+    .esri-view {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    
+    /* Loading fallback */
+    .loading-fallback {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #666;
+    }
+    
+    .loading-fallback .spinner {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 1rem;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #0079c1;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <!-- Fallback loading indicator -->
+    <div class="loading-fallback">
+      <div class="spinner"></div>
+      <p>Cargando aplicación...</p>
+    </div>
+  </div>
+  
+  <noscript>
+    <div style="padding: 2rem; text-align: center; color: #c33;">
+      <h2>JavaScript Requerido</h2>
+      <p>Por favor, habilita JavaScript en tu navegador para usar esta aplicación.</p>
+    </div>
+  </noscript>
+</body>
+</html>
