@@ -23,6 +23,15 @@ export const config = {
     // Layer Definitions
     layers: [
       {
+        name: 'Zonas_PRC',
+        title: 'Zonas PRC',
+        color: [255, 0, 0, 0.6],
+        outlineColor: [255, 0, 0, 1],
+        visible: true,
+        minScale: 0,      // Siempre visible cuando alejado (nivel región)
+        maxScale: 0,  // Se oculta cuando acercas más de 1:50,000
+      },
+      {
         name: 'Areas_Loteos',
         title: 'Áreas Por Loteos',
         color: [255, 127, 0, 0.6],
@@ -44,10 +53,10 @@ export const config = {
       {
         name: 'Predios',
         title: 'Predios',
-        color: [115, 178, 115, 0.6],
+        color: [115, 178, 115, 0],
         outlineColor: [115, 178, 115, 1],
         visible: true,
-        minScale: 50000, // Visible hasta nivel barrios/localidades (1:50,000)
+        minScale: 10000, // Visible hasta nivel barrios/localidades (1:50,000)
         maxScale: 0,     // Sin límite de acercamiento
       },
       {
@@ -67,16 +76,7 @@ export const config = {
         visible: true,
         minScale: 50000, // Visible hasta nivel barrios/localidades (1:50,000)
         maxScale: 0,     // Sin límite de acercamiento
-      },
-      {
-        name: 'Zonas_PRC',
-        title: 'Zonas PRC',
-        color: [255, 0, 0, 0.6],
-        outlineColor: [255, 0, 0, 1],
-        visible: true,
-        minScale: 0,      // Siempre visible cuando alejado (nivel región)
-        maxScale: 50000,  // Se oculta cuando acercas más de 1:50,000
-      },
+      },     
     ],
   },
 
