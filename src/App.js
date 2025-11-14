@@ -12,6 +12,7 @@ import LayerList from '@arcgis/core/widgets/LayerList';
 import Expand from '@arcgis/core/widgets/Expand';
 import BasemapGallery from '@arcgis/core/widgets/BasemapGallery';
 import FeatureTable from '@arcgis/core/widgets/FeatureTable';
+import Legend from '@arcgis/core/widgets/Legend';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import config from './config';
 import './App.css';
@@ -480,6 +481,18 @@ const App = () => {
         setLoading(false);
         console.log('Map initialization complete');
 
+        // Add legend widget (top-right)
+        const legendWidget = new Legend({
+          view: view
+        });
+
+        const legendExpand = new Expand({
+          view: view,
+          content: legendWidget,
+          expandIconClass: 'esri-icon-legend',
+          expanded: false
+        });
+        view.ui.add(legendExpand, 'top-right');
       } catch (error) {
         console.error('Error initializing map:', error);
         setError(config.ui.errors.mapInitialization);
