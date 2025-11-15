@@ -477,14 +477,26 @@
   font-size: 24px;
 }
 
-/* Feature Table Content */
-.feature-table-content {
+/* Feature Table Content Wrapper */
+.feature-table-content-wrapper {
   flex: 1;
   overflow: hidden;
   position: relative;
   min-height: 0; /* Critical for flexbox children */
   display: flex;
   flex-direction: column;
+}
+
+/* Feature Table Content - ArcGIS container */
+.feature-table-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 
 /* Override ArcGIS FeatureTable styles */
@@ -583,12 +595,57 @@
   }
 }
 
+/* Table Loading Overlay */
+.table-loading-overlay {
+  position: absolute;
+  top: 50px; /* Below the header */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  backdrop-filter: blur(3px);
+}
+
+.table-loading-overlay.visible {
+  display: flex;
+}
+
+.table-loading-content {
+  text-align: center;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  min-width: 250px;
+  border: 2px solid #0079c1;
+}
+
+.table-loading-content .spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 1rem;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #0079c1;
+}
+
+.table-loading-content p {
+  color: #2c3e50;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 0;
+}
+
 /* Print styles */
 @media print {
   .loading-overlay,
   .error-banner,
   .feature-table-toggle,
-  .feature-table-container {
+  .feature-table-container,
+  .table-loading-overlay {
     display: none;
   }
 }

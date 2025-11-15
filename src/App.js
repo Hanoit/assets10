@@ -1,19 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Map from '@arcgis/core/Map';
-import MapView from '@arcgis/core/views/MapView';
-import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
-import Compass from '@arcgis/core/widgets/Compass';
-import Home from '@arcgis/core/widgets/Home';
-import Locate from '@arcgis/core/widgets/Locate';
-// NavigationToggle removed - not needed for 2D MapView
-import Search from '@arcgis/core/widgets/Search';
-// Zoom widget removed - MapView includes it by default
-import LayerList from '@arcgis/core/widgets/LayerList';
-import Expand from '@arcgis/core/widgets/Expand';
-import BasemapGallery from '@arcgis/core/widgets/BasemapGallery';
-import FeatureTable from '@arcgis/core/widgets/FeatureTable';
-import Legend from '@arcgis/core/widgets/Legend';
-import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
+// Lazy load ArcGIS modules to reduce initial bundle size
 import config from './config';
 import './App.css';
 
@@ -31,7 +17,7 @@ const App = () => {
 	const [tableMaximized, setTableMaximized] = useState(false);
 	const [selectedLayerForTable, setSelectedLayerForTable] = useState('Direcciones');
 	const [loadedLayersMap, setLoadedLayersMap] = useState({});
-	const [tableKey, setTableKey] = useState(0); // Key to force container recreation
+	const [tableLoading, setTableLoading] = useState(false);
 
 	// Helper function to create WFS URL
 	const createWFSUrl = (layerName) => {
@@ -84,20 +70,9 @@ const App = () => {
 			// Paleta de colores proporcionada + colores intermedios
 			const zoneColors = {
 				// Colores principales de la paleta
-				'ZC': [84, 13, 110, 0.7],      // #540D6E - Morado oscuro
-				'ZCE': [238, 66, 102, 0.7],    // #EE4266 - Rosa/Rojo
-				'ZM': [255, 210, 63, 0.7],     // #FFD23F - Amarillo
-				'ZR': [59, 206, 172, 0.7],     // #3BCEAC - Turquesa
-				'ZUE': [14, 173, 105, 0.7],    // #0EAD69 - Verde
-				// Colores intermedios generados
-				'ZEHP': [161, 39, 106, 0.7],   // Entre morado y rosa
-				'ZEMC': [255, 138, 82, 0.7],   // Entre rosa y amarillo
-				'ZEQ': [149, 218, 117, 0.7],   // Entre amarillo y turquesa
-				'ZER': [36, 139, 138, 0.7],    // Entre turquesa y verde
-				'ZP': [69, 60, 107, 0.7],      // Variación de morado
-				'ZV': [255, 184, 51, 0.7],     // Variación de amarillo
-				'ZCS': [26, 190, 136, 0.7],    // Variación de verde-turquesa
-				'ZAUS': [106, 110, 141, 0.7],  // Gris-morado
+				'ZH': [84, 13, 110, 0.7],      // #540D6E - Morado oscuro
+				'ZHR': [255, 210, 63, 0.7],     // #FFD23F - Amarillo
+				'ZM': [14, 173, 105, 0.7],    // #0EAD69 - Verde
 				'default': [180, 180, 180, 0.6] // Gris para desconocidos
 			};
 
@@ -148,6 +123,17 @@ const App = () => {
 			try {
 				setLoading(true);
 				setError(null);
+
+				// Lazy load core ArcGIS modules
+				const [
+					{ default: Map },
+					{ default: MapView },
+					{ default: GeoJSONLayer },
+				] = await Promise.all([
+					import('@arcgis/core/Map'),
+					import('@arcgis/core/views/MapView'),
+					import('@arcgis/core/layers/GeoJSONLayer'),
+				]);
 
 				// Create map with configured default basemap
 				const map = new Map({
@@ -369,6 +355,27 @@ const App = () => {
 					}
 				}
 
+				// Lazy load widgets (only when needed)
+				const [
+					{ default: Home },
+					{ default: Compass },
+					{ default: Locate },
+					{ default: Search },
+					{ default: Expand },
+					{ default: BasemapGallery },
+					{ default: LayerList },
+					{ default: Legend },
+				] = await Promise.all([
+					import('@arcgis/core/widgets/Home'),
+					import('@arcgis/core/widgets/Compass'),
+					import('@arcgis/core/widgets/Locate'),
+					import('@arcgis/core/widgets/Search'),
+					import('@arcgis/core/widgets/Expand'),
+					import('@arcgis/core/widgets/BasemapGallery'),
+					import('@arcgis/core/widgets/LayerList'),
+					import('@arcgis/core/widgets/Legend'),
+				]);
+
 				// Add navigation widgets (top-left)
 				// Note: Zoom widget is not needed - MapView includes it by default
 				
@@ -516,64 +523,107 @@ const App = () => {
 		console.log('Layer exists in map?', !!loadedLayersMap[selectedLayerForTable]);
 		
 		// Only create FeatureTable if table is visible
-		if (!tableVisible || !mapView || !selectedLayerForTable || !loadedLayersMap[selectedLayerForTable] || !featureTableContainerRef.current) {
+		if (!tableVisible || !mapView || !selectedLayerForTable || !loadedLayersMap[selectedLayerForTable]) {
 			console.log('FeatureTable conditions not met:', {
 				tableVisible,
 				mapView: !!mapView,
 				selectedLayerForTable,
 				hasLayer: !!loadedLayersMap[selectedLayerForTable],
-				hasContainer: !!featureTableContainerRef.current,
 				availableLayers: Object.keys(loadedLayersMap)
 			});
+			setTableLoading(false);
 			return;
 		}
 
+		// Flag to prevent stale state updates
+		let isMounted = true;
+
 		const initFeatureTable = async () => {
 			try {
-				console.log(`=== Starting FeatureTable initialization (key: ${tableKey}) ===`);
+				console.log(`=== Starting FeatureTable initialization ===`);
 				
-				// Destroy existing FeatureTable if it exists
+				// Show loading indicator
+				setTableLoading(true);
+				
+				// CRITICAL: Destroy existing FeatureTable COMPLETELY before creating new one
 				if (featureTableRef.current) {
 					console.log('Destroying existing FeatureTable...');
+					
+					// Remove watch handle first
 					if (featureTableRef.current.watchHandle) {
 						featureTableRef.current.watchHandle.remove();
 					}
+					
+					// Destroy the ArcGIS widget
 					featureTableRef.current.destroy();
 					featureTableRef.current = null;
+					
+					console.log('✓ FeatureTable destroyed');
 				}
 
-				// Wait for React to recreate the container with new key
-				await new Promise(resolve => setTimeout(resolve, 50));
+				// CRITICAL: Always create a fresh container div
+				// This prevents DOM corruption issues
+				if (featureTableContainerRef.current) {
+					// Clear everything from the container
+					while (featureTableContainerRef.current.firstChild) {
+						featureTableContainerRef.current.removeChild(featureTableContainerRef.current.firstChild);
+					}
+				}
 
-				// Verify container is available
-				if (!featureTableContainerRef.current) {
-					console.error('❌ Container ref not available!');
+				// Wait for cleanup
+				await new Promise(resolve => setTimeout(resolve, 100));
+
+				// Check if still mounted
+				if (!isMounted || !featureTableContainerRef.current) {
+					setTableLoading(false);
 					return;
 				}
+
+				// Create a fresh div for FeatureTable
+				const tableDiv = document.createElement('div');
+				tableDiv.style.width = '100%';
+				tableDiv.style.height = '100%';
+				tableDiv.style.display = 'flex';
+				tableDiv.style.flexDirection = 'column';
+				featureTableContainerRef.current.appendChild(tableDiv);
 
 				const selectedLayer = loadedLayersMap[selectedLayerForTable];
 				
 				if (!selectedLayer) {
 					console.error(`❌ Layer not found in map: ${selectedLayerForTable}`);
-					console.log('Available layers:', Object.keys(loadedLayersMap));
+					setTableLoading(false);
 					return;
 				}
 				
 				console.log(`Creating FeatureTable for: ${selectedLayerForTable}`);
 
+				// Lazy load FeatureTable and reactiveUtils only when needed
+				const [
+					{ default: FeatureTable },
+					reactiveUtils
+				] = await Promise.all([
+					import('@arcgis/core/widgets/FeatureTable'),
+					import('@arcgis/core/core/reactiveUtils')
+				]);
+
+				// Check if still mounted
+				if (!isMounted) {
+					setTableLoading(false);
+					return;
+				}
+
 				// Ensure layer is loaded
 				await selectedLayer.when();
-				
-				// Ensure view is ready
 				await mapView.when();
 
 				console.log(`✓ Layer ready with ${selectedLayer.fields?.length || 0} fields`);
 
-				// Create new FeatureTable
+				// Create FeatureTable in the fresh div
+				console.log(`Creating FeatureTable widget for: ${selectedLayerForTable}`);
 				const featureTable = new FeatureTable({
 					view: mapView,
 					layer: selectedLayer,
-					container: featureTableContainerRef.current,
+					container: tableDiv, // Use fresh div, not the ref directly
 					visibleElements: {
 						menuItems: {
 							clearSelection: true,
@@ -586,21 +636,37 @@ const App = () => {
 					}
 				});
 
+				// Store reference
 				featureTableRef.current = featureTable;
 
 				// Wait for FeatureTable to be ready
 				await featureTable.when();
+				console.log(`✓ FeatureTable widget ready`);
+				console.log(`  - ViewModel state: ${featureTable.viewModel.state}`);
+				console.log(`  - Container has children:`, tableDiv.childElementCount);
+
+				// Wait for rendering
+				await new Promise(resolve => setTimeout(resolve, 500));
+
+				if (!isMounted) {
+					featureTable.destroy();
+					setTableLoading(false);
+					return;
+				}
 				
 				console.log(`✓ FeatureTable created successfully for: ${selectedLayerForTable}`);
+				console.log(`  - Final container children:`, tableDiv.childElementCount);
+				console.log(`  - Final ViewModel state: ${featureTable.viewModel.state}`);
 
 				// Watch for popup interaction
 				const watchHandle = reactiveUtils.watch(
 					() => mapView.popup?.selectedFeature,
 					(selectedFeature) => {
 						if (selectedFeature && mapView.popup.visible) {
-							// Highlight the selected feature in the table
 							featureTable.highlightIds.removeAll();
-							const objectId = selectedFeature.attributes.OBJECTID || selectedFeature.attributes.__OBJECTID || selectedFeature.attributes.FID;
+							const objectId = selectedFeature.attributes.OBJECTID || 
+								selectedFeature.attributes.__OBJECTID || 
+								selectedFeature.attributes.FID;
 							if (objectId) {
 								featureTable.highlightIds.add(objectId);
 							}
@@ -609,28 +675,50 @@ const App = () => {
 				);
 
 				// Store watch handle for cleanup
-				featureTableRef.current.watchHandle = watchHandle;
+				if (featureTableRef.current) {
+					featureTableRef.current.watchHandle = watchHandle;
+				}
 
 				console.log('=== FeatureTable initialization complete ===');
+				
+				// Hide loading indicator
+				setTableLoading(false);
 
 			} catch (error) {
 				console.error(`❌ Error creating FeatureTable for ${selectedLayerForTable}:`, error);
+				setTableLoading(false);
 			}
 		};
 
 		initFeatureTable();
 
 		return () => {
+			isMounted = false;
+			
 			if (featureTableRef.current) {
+				console.log('Cleanup: Destroying FeatureTable...');
+				
 				// Remove watch handle
 				if (featureTableRef.current.watchHandle) {
 					featureTableRef.current.watchHandle.remove();
 				}
+
+				// Store container reference before destroying
+				const container = featureTableRef.current.container;
+				
+				// Destroy the widget
 				featureTableRef.current.destroy();
 				featureTableRef.current = null;
+				
+				// Clear container to prevent React conflicts
+				if (container) {
+					while (container.firstChild) {
+						container.removeChild(container.firstChild);
+					}
+				}
 			}
 		};
-	}, [mapView, selectedLayerForTable, loadedLayersMap, tableVisible, tableKey]);
+	}, [mapView, selectedLayerForTable, loadedLayersMap, tableVisible]);
 
 	return (
 		<div className="app">
@@ -693,9 +781,10 @@ const App = () => {
 							id="layer-select"
 							value={selectedLayerForTable}
 							onChange={(e) => {
-								console.log(`Changing layer to: ${e.target.value}`);
-								setSelectedLayerForTable(e.target.value);
-								setTableKey(prev => prev + 1); // Force container recreation
+								const newLayer = e.target.value;
+								console.log(`Changing layer to: ${newLayer}`);
+								// Simply update state - the useEffect will handle cleanup and recreation
+								setSelectedLayerForTable(newLayer);
 							}}
 							className="layer-select"
 						>
@@ -717,6 +806,7 @@ const App = () => {
 						<button 
 							className="close-table-btn"
 							onClick={() => {
+								// Simply close - the useEffect cleanup will handle destruction
 								setTableVisible(false);
 								setTableMaximized(false);
 							}}
@@ -726,11 +816,23 @@ const App = () => {
 						</button>
 					</div>
 				</div>
-				<div 
-					key={tableKey} 
-					ref={featureTableContainerRef} 
-					className="feature-table-content"
-				></div>
+				
+				{/* Feature Table Content Wrapper - isolates loading from ArcGIS container */}
+				<div className="feature-table-content-wrapper">
+					{/* Loading indicator for table data - kept in DOM to avoid insert/remove issues */}
+					<div className={`table-loading-overlay ${tableLoading ? 'visible' : ''}`}>
+						<div className="table-loading-content">
+							<div className="spinner"></div>
+							<p>Cargando datos de {selectedLayerForTable}...</p>
+						</div>
+					</div>
+					
+					{/* ArcGIS FeatureTable Container - React never touches this, only ArcGIS */}
+					<div 
+						ref={featureTableContainerRef} 
+						className="feature-table-content"
+					></div>
+				</div>
 			</div>
 		</div>
 	);

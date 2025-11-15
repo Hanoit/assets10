@@ -54,7 +54,7 @@ export const config = {
         name: 'Predios',
         title: 'Predios',
         color: [115, 178, 115, 0],
-        outlineColor: [115, 178, 115, 1],
+        outlineColor: [45, 46, 45, 0.6],
         visible: true,
         minScale: 10000, // Visible hasta nivel barrios/localidades (1:50,000)
         maxScale: 0,     // Sin límite de acercamiento
@@ -74,7 +74,7 @@ export const config = {
         color: [255, 170, 0, 0.6],
         outlineColor: [255, 170, 0, 1],
         visible: true,
-        minScale: 50000, // Visible hasta nivel barrios/localidades (1:50,000)
+        minScale: 10000, // Visible hasta nivel barrios/localidades (1:50,000)
         maxScale: 0,     // Sin límite de acercamiento
       },     
     ],
