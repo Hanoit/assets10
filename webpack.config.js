@@ -4,6 +4,13 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 module.exports = (env, argv) => {
   const isDevelopment = argv.mode === 'development';
   
+  // Configure publicPath based on environment
+  // For ASP.NET Core integration, use '/assets/' in production
+  // Change this line if you need different path:
+  const publicPath = isDevelopment 
+    ? '/' 
+    : '/assets/';  // ← Cambia a '/' si despliegas en raíz
+  
   return {
     entry: './src/index.js',
     output: {
@@ -11,7 +18,7 @@ module.exports = (env, argv) => {
       filename: isDevelopment ? '[name].js' : '[name].[contenthash].js',
       chunkFilename: isDevelopment ? '[name].chunk.js' : '[name].[contenthash].chunk.js',
       clean: true,
-      publicPath: '/',
+      publicPath: publicPath,
       // Ensure dynamic imports work properly with ArcGIS
       assetModuleFilename: 'assets/[hash][ext][query]',
     },
